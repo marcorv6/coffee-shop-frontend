@@ -1,0 +1,289 @@
+# Staff Schema - Maloca Coffee Shop
+# Collection: staff
+# This schema defines employee/staff details and schedules
+
+components:
+  schemas:
+    Staff:
+      type: object
+      description: Empleado/personal de Maloca
+      required:
+        - id
+        - userId
+        - name
+        - role
+        - email
+        - locationId
+        - status
+        - hireDate
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único del empleado
+          example: "ML-8821"
+        
+        userId:
+          type: string
+          description: Referencia al documento de usuario (Firebase Auth UID)
+          example: "abc123def456"
+        
+        name:
+          type: string
+          description: Nombre completo del empleado
+          example: "Mateo Rivera"
+        
+        role:
+          type: string
+          description: Cargo/puesto de trabajo
+          example: "Barista Principal"
+        
+        email:
+          type: string
+          format: email
+          description: Correo electrónico laboral
+          example: "mateo@maloca.com"
+        
+        phone:
+          type: string
+          nullable: true
+          description: Número de teléfono
+          example: "+52 555 123 4567"
+        
+        locationId:
+          type: string
+          description: ID de la ubicación/sucursal asignada
+          example: "loc_centro"
+        
+        schedule:
+          $ref: '#/components/schemas/WeeklySchedule'
+          description: Horario semanal del empleado
+        
+        hourlyRate:
+          type: number
+          format: float
+          minimum: 0
+          description: Tarifa por hora (MXN)
+          example: 85.50
+        
+        hoursWorkedThisWeek:
+          type: number
+          format: float
+          minimum: 0
+          description: Horas trabajadas en la semana actual
+          example: 32.5
+        
+        status:
+          type: string
+          enum:
+            - on_shift
+            - break
+            - off_duty
+          description: |
+            Estado actual del empleado:
+            - on_shift: En turno activo
+            - break: En descanso
+            - off_duty: Fuera de turno
+          example: "on_shift"
+        
+        currentShiftStart:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Hora de inicio del turno actual
+        
+        hireDate:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          description: Fecha de contratación
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    WeeklySchedule:
+      type: object
+      description: Horario semanal del empleado
+      properties:
+        monday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        tuesday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        wednesday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        thursday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        friday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        saturday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+        sunday:
+          $ref: '#/components/schemas/ShiftTime'
+          nullable: true
+
+    ShiftTime:
+      type: object
+      description: Horario de un turno
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+          description: Hora de inicio (formato HH:MM)
+          example: "08:00"
+        end:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+          description: Hora de fin (formato HH:MM)
+          example: "16:00"
+
+    StaffCreateRequest:
+      type: object
+      required:
+        - userId
+        - name
+        - role
+        - locationId
+        - hourlyRate
+      properties:
+        userId:
+          type: string
+          description: UID del usuario asociado
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        role:
+          type: string
+          description: Cargo/puesto
+          example: "Barista"
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        locationId:
+          type: string
+        hourlyRate:
+          type: number
+          minimum: 0
+        schedule:
+          $ref: '#/components/schemas/WeeklySchedule'
+
+    StaffUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        role:
+          type: string
+        phone:
+          type: string
+        locationId:
+          type: string
+        hourlyRate:
+          type: number
+          minimum: 0
+        schedule:
+          $ref: '#/components/schemas/WeeklySchedule'
+
+    ClockRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - in
+            - out
+            - break_start
+            - break_end
+          description: |
+            Acción de registro:
+            - in: Entrada a turno
+            - out: Salida de turno
+            - break_start: Inicio de descanso
+            - break_end: Fin de descanso
+
+    ClockResponse:
+      type: object
+      properties:
+        staff:
+          $ref: '#/components/schemas/Staff'
+        hoursWorked:
+          type: number
+          format: float
+          description: Horas trabajadas en el turno actual
+          example: 4.5
+        message:
+          type: string
+          example: "Entrada registrada exitosamente"
+
+    StaffListResponse:
+      type: object
+      required:
+        - staff
+        - total
+      properties:
+        staff:
+          type: array
+          items:
+            $ref: '#/components/schemas/Staff'
+        total:
+          type: integer
+          example: 12
+
+    Shift:
+      type: object
+      description: Registro de turno individual
+      properties:
+        id:
+          type: string
+        staffId:
+          type: string
+        date:
+          type: string
+          format: date
+        scheduledStart:
+          type: string
+          example: "08:00"
+        scheduledEnd:
+          type: string
+          example: "16:00"
+        actualStart:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+        actualEnd:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+        breaks:
+          type: array
+          items:
+            type: object
+            properties:
+              start:
+                $ref: '../openapi.yaml#/components/schemas/Timestamp'
+              end:
+                $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        totalHours:
+          type: number
+          format: float
+        status:
+          type: string
+          enum:
+            - scheduled
+            - in_progress
+            - completed
+            - missed

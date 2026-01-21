@@ -1,0 +1,310 @@
+# Transaction Schema - Maloca Coffee Shop
+# Collection: transactions
+# This schema defines payment transactions
+
+components:
+  schemas:
+    Transaction:
+      type: object
+      description: Transacción de pago
+      required:
+        - id
+        - orderId
+        - locationId
+        - type
+        - amount
+        - paymentMethod
+        - status
+        - staffId
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: ID único de la transacción
+          example: "txn_abc123"
+        
+        orderId:
+          type: string
+          description: ID del pedido asociado
+          example: "ord_xyz789"
+        
+        locationId:
+          type: string
+          description: ID de la ubicación/sucursal
+          example: "loc_centro"
+        
+        type:
+          type: string
+          enum:
+            - sale
+            - refund
+            - void
+          description: |
+            Tipo de transacción:
+            - sale: Venta normal
+            - refund: Reembolso
+            - void: Anulación
+          example: "sale"
+        
+        amount:
+          type: number
+          format: float
+          description: Monto de la transacción (positivo para ventas, negativo para reembolsos)
+          example: 226.78
+        
+        paymentMethod:
+          type: string
+          enum:
+            - cash
+            - card
+            - wallet
+          description: Método de pago
+          example: "card"
+        
+        paymentDetails:
+          $ref: '#/components/schemas/TransactionPaymentDetails'
+        
+        status:
+          type: string
+          enum:
+            - completed
+            - refunded
+            - voided
+          description: Estado de la transacción
+          example: "completed"
+        
+        staffId:
+          type: string
+          description: ID del empleado que procesó la transacción
+          example: "ML-8821"
+        
+        refundedTransactionId:
+          type: string
+          nullable: true
+          description: ID de la transacción original (si es un reembolso)
+        
+        refundReason:
+          type: string
+          nullable: true
+          description: Razón del reembolso
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    TransactionPaymentDetails:
+      type: object
+      description: Detalles del pago
+      properties:
+        cardType:
+          type: string
+          nullable: true
+          description: Tipo de tarjeta (Visa, Mastercard, etc.)
+          example: "Mastercard"
+        
+        lastFour:
+          type: string
+          nullable: true
+          pattern: "^[0-9]{4}$"
+          description: Últimos 4 dígitos
+          example: "4412"
+        
+        walletType:
+          type: string
+          nullable: true
+          description: Tipo de billetera digital
+          example: "Apple Pay"
+        
+        authorizationCode:
+          type: string
+          nullable: true
+          description: Código de autorización
+          example: "AUTH123456"
+
+    TransactionStats:
+      type: object
+      description: Estadísticas de transacciones
+      properties:
+        totalRevenue:
+          type: number
+          format: float
+          description: Ingresos totales
+          example: 12450.00
+        
+        transactionCount:
+          type: integer
+          description: Número de transacciones
+          example: 672
+        
+        averageTicket:
+          type: number
+          format: float
+          description: Ticket promedio
+          example: 18.52
+        
+        refundTotal:
+          type: number
+          format: float
+          description: Total de reembolsos
+          example: 142.00
+        
+        refundCount:
+          type: integer
+          description: Número de reembolsos
+          example: 8
+
+    TransactionListResponse:
+      type: object
+      required:
+        - transactions
+        - meta
+        - stats
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          $ref: '../openapi.yaml#/components/schemas/PaginationMeta'
+        stats:
+          $ref: '#/components/schemas/TransactionStats'
+
+    TransactionRefundRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          description: Razón del reembolso
+          example: "Cliente insatisfecho con el producto"
+        amount:
+          type: number
+          format: float
+          nullable: true
+          description: Monto a reembolsar (null para reembolso completo)
+        staffId:
+          type: string
+
+    TransactionRefundResponse:
+      type: object
+      properties:
+        originalTransaction:
+          $ref: '#/components/schemas/Transaction'
+        refundTransaction:
+          $ref: '#/components/schemas/Transaction'
+
+    DailySummary:
+      type: object
+      description: Resumen diario de transacciones
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-01-16"
+        
+        totalRevenue:
+          type: number
+          format: float
+          example: 8450.50
+        
+        transactionCount:
+          type: integer
+          example: 156
+        
+        averageTicket:
+          type: number
+          format: float
+          example: 54.17
+        
+        byPaymentMethod:
+          type: object
+          properties:
+            cash:
+              $ref: '#/components/schemas/PaymentMethodSummary'
+            card:
+              $ref: '#/components/schemas/PaymentMethodSummary'
+            wallet:
+              $ref: '#/components/schemas/PaymentMethodSummary'
+        
+        byHour:
+          type: array
+          items:
+            type: object
+            properties:
+              hour:
+                type: integer
+                minimum: 0
+                maximum: 23
+              revenue:
+                type: number
+              count:
+                type: integer
+        
+        comparison:
+          type: object
+          description: Comparación con período anterior
+          properties:
+            revenueChange:
+              type: number
+              description: Cambio porcentual en ingresos
+              example: 12.5
+            countChange:
+              type: number
+              description: Cambio porcentual en transacciones
+              example: 8.2
+
+    PaymentMethodSummary:
+      type: object
+      properties:
+        total:
+          type: number
+          format: float
+          example: 3500.00
+        count:
+          type: integer
+          example: 45
+        percentage:
+          type: number
+          format: float
+          example: 41.4
+
+    TransactionExportRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+        - format
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        format:
+          type: string
+          enum:
+            - csv
+            - pdf
+            - xlsx
+        locationId:
+          type: string
+          nullable: true
+        paymentMethod:
+          type: string
+          nullable: true
+
+    TransactionExportResponse:
+      type: object
+      properties:
+        downloadUrl:
+          type: string
+          format: uri
+          description: URL temporal para descargar el archivo
+        expiresAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          description: Fecha de expiración del enlace
+        recordCount:
+          type: integer
+          description: Número de registros exportados

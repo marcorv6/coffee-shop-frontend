@@ -1,0 +1,399 @@
+# Inventory Schema - Maloca Coffee Shop
+# Collection: inventory
+# This schema defines stock and supply management
+
+components:
+  schemas:
+    InventoryItem:
+      type: object
+      description: Artículo de inventario
+      required:
+        - id
+        - name
+        - category
+        - unit
+        - currentStock
+        - minimumThreshold
+        - unitCost
+        - supplier
+        - locationId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único del artículo
+          example: "inv_cafe_etiope"
+        
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Nombre del artículo
+          example: "Etíope Yirgacheffe"
+        
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Descripción adicional
+          example: "Grano Entero, Tueste Ligero"
+        
+        category:
+          type: string
+          enum:
+            - cafe
+            - lacteos
+            - reposteria
+            - empaques
+            - limpieza
+            - otros
+          description: Categoría del inventario
+          example: "cafe"
+        
+        unit:
+          type: string
+          description: Unidad de medida
+          example: "kg"
+          enum:
+            - kg
+            - g
+            - L
+            - ml
+            - unidades
+            - cajas
+            - paquetes
+        
+        currentStock:
+          type: number
+          format: float
+          minimum: 0
+          description: Stock actual
+          example: 12.5
+        
+        minimumThreshold:
+          type: number
+          format: float
+          minimum: 0
+          description: Umbral mínimo de stock
+          example: 5.0
+        
+        unitCost:
+          type: number
+          format: float
+          minimum: 0
+          description: Costo por unidad (MXN)
+          example: 480.00
+        
+        supplier:
+          type: string
+          description: Nombre del proveedor
+          example: "Atlas Coffee Importers"
+        
+        supplierId:
+          type: string
+          nullable: true
+          description: ID del proveedor (si existe en sistema)
+        
+        locationId:
+          type: string
+          description: ID de la ubicación
+          example: "loc_centro"
+        
+        lastRestocked:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Fecha del último reabastecimiento
+        
+        expirationDate:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Fecha de caducidad (si aplica)
+        
+        sku:
+          type: string
+          nullable: true
+          description: Código SKU del producto
+          example: "CAF-ETH-001"
+        
+        barcode:
+          type: string
+          nullable: true
+          description: Código de barras
+        
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de imagen del producto
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    InventoryAlert:
+      type: object
+      description: Alerta de inventario bajo
+      required:
+        - itemId
+        - name
+        - currentStock
+        - minimumThreshold
+        - severity
+      properties:
+        itemId:
+          type: string
+          example: "inv_leche_entera"
+        
+        name:
+          type: string
+          example: "Leche Orgánica Entera"
+        
+        currentStock:
+          type: number
+          format: float
+          example: 4
+        
+        minimumThreshold:
+          type: number
+          format: float
+          example: 10
+        
+        unit:
+          type: string
+          example: "unidades"
+        
+        severity:
+          type: string
+          enum:
+            - critical
+            - warning
+            - normal
+          description: |
+            Severidad de la alerta:
+            - critical: Stock < 25% del umbral
+            - warning: Stock < 50% del umbral
+            - normal: Stock < 100% del umbral
+          example: "critical"
+        
+        daysUntilStockout:
+          type: integer
+          nullable: true
+          description: Días estimados hasta agotarse
+          example: 2
+        
+        supplier:
+          type: string
+          example: "Meadow Fresh Farms"
+
+    InventoryCreateRequest:
+      type: object
+      required:
+        - name
+        - category
+        - unit
+        - currentStock
+        - minimumThreshold
+        - unitCost
+        - supplier
+        - locationId
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        category:
+          type: string
+          enum:
+            - cafe
+            - lacteos
+            - reposteria
+            - empaques
+            - limpieza
+            - otros
+        unit:
+          type: string
+        currentStock:
+          type: number
+          minimum: 0
+        minimumThreshold:
+          type: number
+          minimum: 0
+        unitCost:
+          type: number
+          minimum: 0
+        supplier:
+          type: string
+        supplierId:
+          type: string
+        locationId:
+          type: string
+        expirationDate:
+          type: string
+          format: date
+        sku:
+          type: string
+        barcode:
+          type: string
+
+    InventoryUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        currentStock:
+          type: number
+          minimum: 0
+        minimumThreshold:
+          type: number
+          minimum: 0
+        unitCost:
+          type: number
+          minimum: 0
+        supplier:
+          type: string
+        supplierId:
+          type: string
+        expirationDate:
+          type: string
+          format: date
+
+    InventoryAdjustRequest:
+      type: object
+      required:
+        - adjustment
+        - reason
+      properties:
+        adjustment:
+          type: number
+          description: Cantidad a ajustar (positivo para agregar, negativo para reducir)
+          example: -2.5
+        
+        reason:
+          type: string
+          enum:
+            - restock
+            - waste
+            - correction
+            - sale
+            - transfer
+            - expired
+          description: Razón del ajuste
+          example: "restock"
+        
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Notas adicionales
+          example: "Reabastecimiento semanal"
+        
+        staffId:
+          type: string
+          description: ID del empleado que realiza el ajuste
+
+    InventoryAdjustment:
+      type: object
+      description: Registro de ajuste de inventario
+      properties:
+        id:
+          type: string
+        itemId:
+          type: string
+        previousStock:
+          type: number
+        adjustment:
+          type: number
+        newStock:
+          type: number
+        reason:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        staffId:
+          type: string
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    InventoryListResponse:
+      type: object
+      required:
+        - items
+        - alerts
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryAlert'
+        stats:
+          $ref: '#/components/schemas/InventoryStats'
+
+    InventoryStats:
+      type: object
+      description: Estadísticas de inventario
+      properties:
+        totalValue:
+          type: number
+          format: float
+          description: Valor total del inventario
+          example: 45280.50
+        
+        lowStockCount:
+          type: integer
+          description: Artículos con stock bajo
+          example: 12
+        
+        criticalCount:
+          type: integer
+          description: Artículos en estado crítico
+          example: 3
+        
+        expiringCount:
+          type: integer
+          description: Artículos próximos a caducar
+          example: 5
+        
+        pendingDeliveries:
+          type: integer
+          description: Entregas pendientes
+          example: 2
+        
+        wasteThisMonth:
+          type: number
+          format: float
+          description: Merma del mes actual
+          example: 142.00
+
+    InventoryAlertListResponse:
+      type: object
+      required:
+        - alerts
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryAlert'
+        summary:
+          type: object
+          properties:
+            critical:
+              type: integer
+            warning:
+              type: integer
+            total:
+              type: integer

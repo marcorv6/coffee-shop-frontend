@@ -1,0 +1,342 @@
+# Inventory Endpoints - Maloca Coffee Shop
+# Stock and supply management
+
+paths:
+  /inventory:
+    get:
+      tags:
+        - Inventory
+      summary: Listar inventario
+      description: |
+        Obtiene la lista de artículos del inventario.
+        Incluye alertas de stock bajo.
+      operationId: listInventory
+      parameters:
+        - name: category
+          in: query
+          description: Filtrar por categoría
+          schema:
+            type: string
+            enum:
+              - cafe
+              - lacteos
+              - reposteria
+              - empaques
+              - limpieza
+              - otros
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          description: Solo mostrar artículos con stock bajo
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Buscar por nombre o SKU
+          schema:
+            type: string
+        - name: supplierId
+          in: query
+          description: Filtrar por proveedor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de inventario
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/inventory.yaml#/components/schemas/InventoryListResponse'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Inventory
+      summary: Crear artículo
+      description: Crea un nuevo artículo en el inventario
+      operationId: createInventoryItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/inventory.yaml#/components/schemas/InventoryCreateRequest'
+            example:
+              name: "Café Colombiano Premium"
+              description: "Grano entero, tueste medio"
+              category: "cafe"
+              unit: "kg"
+              currentStock: 25.0
+              minimumThreshold: 10.0
+              unitCost: 350.00
+              supplier: "Colombian Coffee Importers"
+              locationId: "loc_centro"
+              sku: "CAF-COL-001"
+      responses:
+        '201':
+          description: Artículo creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/inventory.yaml#/components/schemas/InventoryItem'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /inventory/{id}:
+    get:
+      tags:
+        - Inventory
+      summary: Obtener artículo
+      description: Obtiene los detalles de un artículo del inventario
+      operationId: getInventoryItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del artículo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Artículo encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/inventory.yaml#/components/schemas/InventoryItem'
+                  recentAdjustments:
+                    type: array
+                    items:
+                      $ref: '../schemas/inventory.yaml#/components/schemas/InventoryAdjustment'
+                    description: Últimos 10 ajustes de stock
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Inventory
+      summary: Actualizar artículo
+      description: Actualiza la información de un artículo
+      operationId: updateInventoryItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/inventory.yaml#/components/schemas/InventoryUpdateRequest'
+            example:
+              unitCost: 380.00
+              minimumThreshold: 15.0
+              supplier: "Nuevo Proveedor S.A."
+      responses:
+        '200':
+          description: Artículo actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/inventory.yaml#/components/schemas/InventoryItem'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Inventory
+      summary: Eliminar artículo
+      description: Elimina un artículo del inventario
+      operationId: deleteInventoryItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Artículo eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /inventory/{id}/adjust:
+    post:
+      tags:
+        - Inventory
+      summary: Ajustar stock
+      description: |
+        Registra un ajuste de stock (entrada o salida).
+        
+        Razones válidas:
+        - `restock`: Reabastecimiento
+        - `waste`: Merma/desperdicio
+        - `correction`: Corrección de inventario
+        - `sale`: Venta (normalmente automático)
+        - `transfer`: Transferencia entre ubicaciones
+        - `expired`: Producto caducado
+      operationId: adjustInventoryStock
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del artículo
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/inventory.yaml#/components/schemas/InventoryAdjustRequest'
+            examples:
+              restock:
+                summary: Reabastecimiento
+                value:
+                  adjustment: 50.0
+                  reason: "restock"
+                  notes: "Orden de compra #PO-2024-001"
+                  staffId: "ML-8821"
+              waste:
+                summary: Merma
+                value:
+                  adjustment: -2.5
+                  reason: "waste"
+                  notes: "Leche caducada"
+                  staffId: "ML-8821"
+              correction:
+                summary: Corrección
+                value:
+                  adjustment: -1.0
+                  reason: "correction"
+                  notes: "Ajuste después de conteo físico"
+                  staffId: "ML-8821"
+      responses:
+        '200':
+          description: Stock ajustado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/inventory.yaml#/components/schemas/InventoryItem'
+                  adjustment:
+                    $ref: '../schemas/inventory.yaml#/components/schemas/InventoryAdjustment'
+        '400':
+          description: Ajuste inválido
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              examples:
+                insufficient_stock:
+                  value:
+                    code: "INSUFFICIENT_STOCK"
+                    message: "Stock insuficiente para realizar el ajuste"
+                invalid_adjustment:
+                  value:
+                    code: "INVALID_ADJUSTMENT"
+                    message: "El ajuste no puede ser cero"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /inventory/alerts:
+    get:
+      tags:
+        - Inventory
+      summary: Obtener alertas
+      description: |
+        Obtiene la lista de alertas de inventario bajo.
+        
+        Niveles de severidad:
+        - `critical`: Stock < 25% del umbral mínimo
+        - `warning`: Stock < 50% del umbral mínimo
+        - `normal`: Stock < 100% del umbral mínimo
+      operationId: getInventoryAlerts
+      parameters:
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: severity
+          in: query
+          description: Filtrar por severidad
+          schema:
+            type: string
+            enum:
+              - critical
+              - warning
+              - normal
+        - name: category
+          in: query
+          description: Filtrar por categoría
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de alertas
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/inventory.yaml#/components/schemas/InventoryAlertListResponse'
+              example:
+                alerts:
+                  - itemId: "inv_leche_entera"
+                    name: "Leche Orgánica Entera"
+                    currentStock: 4
+                    minimumThreshold: 10
+                    unit: "unidades"
+                    severity: "critical"
+                    daysUntilStockout: 2
+                    supplier: "Meadow Fresh Farms"
+                  - itemId: "inv_cafe_etiope"
+                    name: "Café Etíope Yirgacheffe"
+                    currentStock: 3.5
+                    minimumThreshold: 5
+                    unit: "kg"
+                    severity: "warning"
+                    daysUntilStockout: 5
+                    supplier: "Atlas Coffee Importers"
+                summary:
+                  critical: 3
+                  warning: 8
+                  total: 11
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'

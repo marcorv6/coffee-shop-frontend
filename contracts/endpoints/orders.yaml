@@ -1,0 +1,389 @@
+# Orders Endpoints - Maloca Coffee Shop
+# Order management and processing
+
+paths:
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Listar pedidos
+      description: Obtiene la lista de pedidos con filtros opcionales
+      operationId: listOrders
+      parameters:
+        - name: status
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum:
+              - pending
+              - preparing
+              - ready
+              - completed
+              - cancelled
+        - name: paymentStatus
+          in: query
+          description: Filtrar por estado de pago
+          schema:
+            type: string
+            enum:
+              - pending
+              - paid
+              - refunded
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: customerId
+          in: query
+          description: Filtrar por cliente
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          description: Fecha inicio (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Fecha fin (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista de pedidos
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/order.yaml#/components/schemas/OrderListResponse'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Orders
+      summary: Crear pedido
+      description: |
+        Crea un nuevo pedido.
+        Puede ser creado por clientes (sin auth) o personal.
+      operationId: createOrder
+      security: []  # Allow unauthenticated orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/order.yaml#/components/schemas/OrderCreateRequest'
+            example:
+              items:
+                - menuItemId: "item_cappuccino"
+                  quantity: 2
+                  customizations:
+                    - "Grande (+$15.00)"
+                - menuItemId: "item_croissant"
+                  quantity: 1
+              tableNumber: 12
+              customerName: "Juan Pérez"
+              locationId: "loc_centro"
+              notes: "Sin azúcar, por favor"
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+
+  /orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Obtener pedido
+      description: Obtiene los detalles de un pedido
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del pedido
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /orders/{id}/status:
+    patch:
+      tags:
+        - Orders
+      summary: Actualizar estado
+      description: |
+        Actualiza el estado del pedido.
+        
+        Transiciones válidas:
+        - pending → preparing
+        - preparing → ready
+        - ready → completed
+        - any → cancelled (con razón)
+      operationId: updateOrderStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/order.yaml#/components/schemas/OrderStatusUpdateRequest'
+            example:
+              status: "preparing"
+              staffId: "ML-8821"
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+        '400':
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "INVALID_STATUS_TRANSITION"
+                message: "No se puede cambiar de 'completed' a 'preparing'"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /orders/{id}/pay:
+    post:
+      tags:
+        - Orders
+      summary: Procesar pago
+      description: |
+        Procesa el pago de un pedido.
+        Crea automáticamente una transacción asociada.
+      operationId: processOrderPayment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/order.yaml#/components/schemas/OrderPaymentRequest'
+            example:
+              paymentMethod: "card"
+              paymentDetails:
+                cardType: "Mastercard"
+                lastFour: "4412"
+              staffId: "ML-8821"
+      responses:
+        '200':
+          description: Pago procesado
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/order.yaml#/components/schemas/OrderPaymentResponse'
+        '400':
+          description: Error de pago
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "ALREADY_PAID"
+                message: "Este pedido ya fue pagado"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /orders/{id}/cancel:
+    post:
+      tags:
+        - Orders
+      summary: Cancelar pedido
+      description: |
+        Cancela un pedido existente.
+        Si ya fue pagado, se genera un reembolso automáticamente.
+      operationId: cancelOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/order.yaml#/components/schemas/OrderCancelRequest'
+            example:
+              reason: "Cliente cambió de opinión"
+              staffId: "ML-8821"
+      responses:
+        '200':
+          description: Pedido cancelado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+                  refundTransaction:
+                    $ref: '../schemas/transaction.yaml#/components/schemas/Transaction'
+                    nullable: true
+                    description: Transacción de reembolso (si aplica)
+        '400':
+          description: No se puede cancelar
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "CANNOT_CANCEL"
+                message: "No se puede cancelar un pedido ya entregado"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /orders/{id}/items:
+    post:
+      tags:
+        - Orders
+      summary: Agregar item
+      description: |
+        Agrega un producto a un pedido existente.
+        Solo válido para pedidos en estado 'pending'.
+      operationId: addOrderItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/order.yaml#/components/schemas/OrderItemRequest'
+            example:
+              menuItemId: "item_latte"
+              quantity: 1
+              customizations:
+                - "Leche de almendra (+$10.00)"
+      responses:
+        '200':
+          description: Item agregado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+        '400':
+          description: No se puede modificar el pedido
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "ORDER_NOT_MODIFIABLE"
+                message: "No se puede modificar un pedido en preparación"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /orders/{id}/items/{itemIndex}:
+    delete:
+      tags:
+        - Orders
+      summary: Eliminar item
+      description: |
+        Elimina un producto de un pedido existente.
+        Solo válido para pedidos en estado 'pending'.
+      operationId: removeOrderItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del pedido
+          schema:
+            type: string
+        - name: itemIndex
+          in: path
+          required: true
+          description: Índice del item en el array (0-based)
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Item eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '../schemas/order.yaml#/components/schemas/Order'
+        '400':
+          description: No se puede modificar el pedido
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'

@@ -1,0 +1,280 @@
+# Menu Endpoints - Maloca Coffee Shop
+# Categories and menu items management
+
+paths:
+  /menu/categories:
+    get:
+      tags:
+        - Menu
+      summary: Listar categorías
+      description: Obtiene todas las categorías del menú
+      operationId: listCategories
+      security: []  # Public endpoint
+      parameters:
+        - name: isActive
+          in: query
+          description: Filtrar por estado activo
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de categorías
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/menu.yaml#/components/schemas/CategoryListResponse'
+              example:
+                categories:
+                  - id: "cat_cafe"
+                    name: "Café"
+                    slug: "cafe"
+                    icon: "☕"
+                    order: 1
+                    isActive: true
+                  - id: "cat_reposteria"
+                    name: "Repostería"
+                    slug: "reposteria"
+                    icon: "🥐"
+                    order: 2
+                    isActive: true
+
+    post:
+      tags:
+        - Menu
+      summary: Crear categoría
+      description: Crea una nueva categoría en el menú
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                icon:
+                  type: string
+                order:
+                  type: integer
+            example:
+              name: "Bebidas Frías"
+              slug: "bebidas-frias"
+              icon: "🧊"
+              order: 5
+      responses:
+        '201':
+          description: Categoría creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  category:
+                    $ref: '../schemas/menu.yaml#/components/schemas/Category'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /menu/items:
+    get:
+      tags:
+        - Menu
+      summary: Listar productos
+      description: |
+        Obtiene la lista de productos del menú.
+        Endpoint público para clientes.
+      operationId: listMenuItems
+      security: []  # Public endpoint
+      parameters:
+        - name: categoryId
+          in: query
+          description: Filtrar por categoría
+          schema:
+            type: string
+        - name: subcategory
+          in: query
+          description: Filtrar por subcategoría
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Buscar por nombre o descripción
+          schema:
+            type: string
+        - name: isAvailable
+          in: query
+          description: Filtrar por disponibilidad
+          schema:
+            type: boolean
+        - name: minPrice
+          in: query
+          description: Precio mínimo
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          description: Precio máximo
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/menu.yaml#/components/schemas/MenuItemListResponse'
+
+    post:
+      tags:
+        - Menu
+      summary: Crear producto
+      description: Crea un nuevo producto en el menú
+      operationId: createMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/menu.yaml#/components/schemas/MenuItemCreateRequest'
+            example:
+              name: "Mocha Especial"
+              description: "Espresso con chocolate belga y crema batida"
+              price: 75.00
+              categoryId: "cat_cafe"
+              subcategory: "Con Leche"
+              emoji: "☕"
+              badges:
+                - "Nuevo"
+              customizations:
+                - name: "Tamaño"
+                  type: "single"
+                  required: true
+                  options:
+                    - label: "Regular"
+                      priceModifier: 0
+                    - label: "Grande"
+                      priceModifier: 15
+              preparationTime: 5
+              ingredients:
+                - "cafe_grano"
+                - "leche_entera"
+                - "chocolate_belga"
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/menu.yaml#/components/schemas/MenuItem'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /menu/items/{id}:
+    get:
+      tags:
+        - Menu
+      summary: Obtener producto
+      description: Obtiene los detalles de un producto
+      operationId: getMenuItem
+      security: []  # Public endpoint
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del producto
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/menu.yaml#/components/schemas/MenuItem'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Menu
+      summary: Actualizar producto
+      description: Actualiza un producto del menú
+      operationId: updateMenuItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/menu.yaml#/components/schemas/MenuItemUpdateRequest'
+            example:
+              price: 80.00
+              isAvailable: true
+              badges:
+                - "Popular"
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '../schemas/menu.yaml#/components/schemas/MenuItem'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Menu
+      summary: Eliminar producto
+      description: |
+        Elimina un producto del menú.
+        El producto no se elimina físicamente, se marca como no disponible.
+      operationId: deleteMenuItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Producto eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'

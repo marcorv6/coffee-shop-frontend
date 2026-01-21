@@ -1,0 +1,209 @@
+# User Schema - Maloca Coffee Shop
+# Collection: users
+# This schema defines user accounts and roles
+
+components:
+  schemas:
+    User:
+      type: object
+      description: Usuario del sistema Maloca
+      required:
+        - uid
+        - email
+        - displayName
+        - role
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        uid:
+          type: string
+          description: Firebase Auth UID (also document ID)
+          example: "abc123def456"
+        
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario
+          example: "mateo@maloca.com"
+        
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Nombre completo del usuario
+          example: "Mateo Rivera"
+        
+        role:
+          type: string
+          enum:
+            - admin
+            - gerente
+            - barista
+            - cajero
+            - cliente
+          description: |
+            Rol del usuario en el sistema:
+            - admin: Acceso total al sistema
+            - gerente: Gestión de tienda y personal
+            - barista: Preparación de pedidos
+            - cajero: Procesamiento de pagos
+            - cliente: Solo menú y pedidos propios
+          example: "admin"
+        
+        status:
+          type: string
+          enum:
+            - activo
+            - inactivo
+          description: Estado de la cuenta
+          example: "activo"
+        
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de la imagen de perfil (Firebase Storage)
+          example: "https://storage.googleapis.com/maloca/avatars/user123.jpg"
+        
+        employeeId:
+          type: string
+          nullable: true
+          description: ID de empleado (referencia a colección staff)
+          example: "ML-8821"
+        
+        locationId:
+          type: string
+          nullable: true
+          description: ID de ubicación asignada
+          example: "loc_centro"
+        
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Lista de permisos específicos
+          example:
+            - "orders:read"
+            - "orders:write"
+            - "inventory:read"
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          description: Fecha de creación de la cuenta
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          description: Fecha de última actualización
+        
+        lastLogin:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Fecha del último inicio de sesión
+
+    UserCreateRequest:
+      type: object
+      required:
+        - email
+        - password
+        - displayName
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: "nuevo@maloca.com"
+        password:
+          type: string
+          minLength: 8
+          description: Contraseña (mínimo 8 caracteres)
+          example: "SecurePass123!"
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Nuevo Usuario"
+        role:
+          type: string
+          enum:
+            - admin
+            - gerente
+            - barista
+            - cajero
+            - cliente
+          example: "barista"
+        locationId:
+          type: string
+          nullable: true
+          example: "loc_centro"
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        role:
+          type: string
+          enum:
+            - admin
+            - gerente
+            - barista
+            - cajero
+            - cliente
+        status:
+          type: string
+          enum:
+            - activo
+            - inactivo
+        locationId:
+          type: string
+          nullable: true
+
+    UserPermissionsRequest:
+      type: object
+      required:
+        - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Lista completa de permisos a asignar
+          example:
+            - "orders:read"
+            - "orders:write"
+            - "inventory:read"
+            - "inventory:write"
+
+    UserListResponse:
+      type: object
+      required:
+        - users
+        - meta
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          $ref: '../openapi.yaml#/components/schemas/PaginationMeta'
+
+    # Role permissions matrix
+    RolePermissions:
+      type: object
+      description: |
+        Matriz de permisos por rol:
+        
+        | Permiso | Admin | Gerente | Barista | Cajero | Cliente |
+        |---------|-------|---------|---------|--------|---------|
+        | users:* | ✓ | - | - | - | - |
+        | staff:* | ✓ | ✓ | - | - | - |
+        | orders:read | ✓ | ✓ | ✓ | ✓ | own |
+        | orders:write | ✓ | ✓ | ✓ | ✓ | own |
+        | inventory:* | ✓ | ✓ | - | - | - |
+        | transactions:* | ✓ | ✓ | - | ✓ | - |
+        | menu:read | ✓ | ✓ | ✓ | ✓ | ✓ |
+        | menu:write | ✓ | ✓ | - | - | - |
+        | dashboard:* | ✓ | ✓ | - | - | - |

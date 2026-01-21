@@ -1,0 +1,223 @@
+# Auth Endpoints - Maloca Coffee Shop
+# Authentication and session management
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Iniciar sesión
+      description: |
+        Autentica al usuario con email y contraseña.
+        Utiliza Firebase Authentication internamente.
+      operationId: login
+      security: []  # No auth required
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "mateo@maloca.com"
+              password: "SecurePassword123"
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "INVALID_CREDENTIALS"
+                message: "Email o contraseña incorrectos"
+        '403':
+          description: Cuenta desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "ACCOUNT_DISABLED"
+                message: "Tu cuenta ha sido desactivada. Contacta al administrador."
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Cerrar sesión
+      description: Cierra la sesión actual del usuario
+      operationId: logout
+      responses:
+        '200':
+          description: Logout exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Sesión cerrada exitosamente"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /auth/password-reset:
+    post:
+      tags:
+        - Auth
+      summary: Solicitar restablecimiento de contraseña
+      description: |
+        Envía un email con instrucciones para restablecer la contraseña.
+        Utiliza Firebase Auth password reset.
+      operationId: passwordReset
+      security: []  # No auth required
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+            example:
+              email: "mateo@maloca.com"
+      responses:
+        '200':
+          description: Email enviado (siempre retorna éxito por seguridad)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Si el email existe, recibirás instrucciones para restablecer tu contraseña"
+        '429':
+          description: Demasiadas solicitudes
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "RATE_LIMIT_EXCEEDED"
+                message: "Demasiadas solicitudes. Intenta de nuevo en 5 minutos."
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Obtener usuario actual
+      description: Retorna la información del usuario autenticado
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Usuario actual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /auth/profile:
+    patch:
+      tags:
+        - Auth
+      summary: Actualizar perfil
+      description: Actualiza el perfil del usuario autenticado
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico
+        password:
+          type: string
+          minLength: 8
+          description: Contraseña
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '../schemas/user.yaml#/components/schemas/User'
+        token:
+          type: string
+          description: JWT token de Firebase Auth
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresIn:
+          type: integer
+          description: Tiempo de expiración en segundos
+          example: 3600
+        refreshToken:
+          type: string
+          description: Token para renovar la sesión
+          example: "AMf-vBw..."
+
+    PasswordResetRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email de la cuenta a recuperar
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Nombre a mostrar
+        avatar:
+          type: string
+          format: uri
+          description: URL de la imagen de perfil
+        phone:
+          type: string
+          description: Número de teléfono

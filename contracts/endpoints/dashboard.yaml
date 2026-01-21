@@ -1,0 +1,393 @@
+# Dashboard Endpoints - Maloca Coffee Shop
+# Statistics and reporting
+
+paths:
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Obtener estadísticas
+      description: |
+        Obtiene las estadísticas principales del dashboard.
+        Incluye ventas, pedidos, personal y tendencias.
+      operationId: getDashboardStats
+      parameters:
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación (null = todas)
+          schema:
+            type: string
+        - name: period
+          in: query
+          description: Período de tiempo
+          schema:
+            type: string
+            enum:
+              - today
+              - week
+              - month
+            default: today
+      responses:
+        '200':
+          description: Estadísticas del dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+              example:
+                dailySales: 8450.50
+                activeOrders: 12
+                staffOnDuty: 8
+                newCustomers: 42
+                trends:
+                  sales:
+                    value: "12.5%"
+                    type: "up"
+                  orders:
+                    value: "5.2%"
+                    type: "up"
+                  staff:
+                    value: "Estable"
+                    type: "neutral"
+                  customers:
+                    value: "8.4%"
+                    type: "up"
+                topSellingItems:
+                  - name: "Cappuccino Artesanal"
+                    quantity: 45
+                    revenue: 2025.00
+                  - name: "Latte Macchiato"
+                    quantity: 38
+                    revenue: 1805.00
+                  - name: "Cold Brew Nitro"
+                    quantity: 32
+                    revenue: 1760.00
+                recentActivity:
+                  - type: "order"
+                    message: "Nuevo pedido #ML-4832 recibido"
+                    timestamp:
+                      _seconds: 1705420800
+                      _nanoseconds: 0
+                  - type: "inventory"
+                    message: "Stock bajo: Leche Entera (4 unidades)"
+                    timestamp:
+                      _seconds: 1705419000
+                      _nanoseconds: 0
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /dashboard/sales-chart:
+    get:
+      tags:
+        - Dashboard
+      summary: Datos del gráfico de ventas
+      description: |
+        Obtiene los datos para el gráfico de ventas.
+        Retorna datos agrupados por día/hora según el período.
+      operationId: getSalesChartData
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: Período del gráfico
+          schema:
+            type: string
+            enum:
+              - 7days
+              - 30days
+              - custom
+        - name: startDate
+          in: query
+          description: Fecha inicio (requerido si period=custom)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Fecha fin (requerido si period=custom)
+          schema:
+            type: string
+            format: date
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: groupBy
+          in: query
+          description: Agrupar por
+          schema:
+            type: string
+            enum:
+              - hour
+              - day
+              - week
+            default: day
+      responses:
+        '200':
+          description: Datos del gráfico
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesChartData'
+              example:
+                labels:
+                  - "Lun"
+                  - "Mar"
+                  - "Mié"
+                  - "Jue"
+                  - "Vie"
+                  - "Sáb"
+                  - "Dom"
+                data:
+                  - 6500.00
+                  - 7200.00
+                  - 6800.00
+                  - 8100.00
+                  - 9200.00
+                  - 10500.00
+                  - 8450.00
+                comparison:
+                  - 5800.00
+                  - 6500.00
+                  - 6200.00
+                  - 7500.00
+                  - 8800.00
+                  - 9800.00
+                  - 7900.00
+                summary:
+                  total: 56750.00
+                  average: 8107.14
+                  highest:
+                    value: 10500.00
+                    label: "Sáb"
+                  lowest:
+                    value: 6500.00
+                    label: "Lun"
+                  changePercent: 9.8
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /dashboard/activity:
+    get:
+      tags:
+        - Dashboard
+      summary: Feed de actividad
+      description: |
+        Obtiene el feed de actividad reciente.
+        Incluye pedidos, alertas de inventario y eventos del personal.
+      operationId: getActivityFeed
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de actividades
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Filtrar por tipo de actividad
+          schema:
+            type: string
+            enum:
+              - order
+              - inventory
+              - staff
+              - system
+      responses:
+        '200':
+          description: Feed de actividad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeed'
+              example:
+                activities:
+                  - id: "act_001"
+                    type: "order"
+                    icon: "shopping_cart"
+                    message: "Nuevo pedido #ML-4832 recibido"
+                    details: "Cappuccino + Croissant - $85.00"
+                    timestamp:
+                      _seconds: 1705420800
+                      _nanoseconds: 0
+                    metadata:
+                      orderId: "ord_abc123"
+                  - id: "act_002"
+                    type: "inventory"
+                    icon: "warning"
+                    message: "Stock crítico: Leche Entera"
+                    details: "4 unidades restantes (mínimo: 10)"
+                    timestamp:
+                      _seconds: 1705419000
+                      _nanoseconds: 0
+                    metadata:
+                      itemId: "inv_leche_entera"
+                      severity: "critical"
+                  - id: "act_003"
+                    type: "staff"
+                    icon: "person"
+                    message: "María García inició turno"
+                    details: "Barista Principal - Turno 08:00-16:00"
+                    timestamp:
+                      _seconds: 1705392000
+                      _nanoseconds: 0
+                    metadata:
+                      staffId: "ML-1234"
+                hasMore: true
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+components:
+  schemas:
+    DashboardStats:
+      type: object
+      properties:
+        dailySales:
+          type: number
+          format: float
+          description: Ventas del día
+        activeOrders:
+          type: integer
+          description: Pedidos activos
+        staffOnDuty:
+          type: integer
+          description: Personal en turno
+        newCustomers:
+          type: integer
+          description: Nuevos clientes
+        trends:
+          type: object
+          properties:
+            sales:
+              $ref: '#/components/schemas/Trend'
+            orders:
+              $ref: '#/components/schemas/Trend'
+            staff:
+              $ref: '#/components/schemas/Trend'
+            customers:
+              $ref: '#/components/schemas/Trend'
+        topSellingItems:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              quantity:
+                type: integer
+              revenue:
+                type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+
+    Trend:
+      type: object
+      properties:
+        value:
+          type: string
+          description: Valor del cambio (ej. "12.5%")
+        type:
+          type: string
+          enum:
+            - up
+            - down
+            - neutral
+
+    SalesChartData:
+      type: object
+      properties:
+        labels:
+          type: array
+          items:
+            type: string
+          description: Etiquetas del eje X
+        data:
+          type: array
+          items:
+            type: number
+          description: Datos del período actual
+        comparison:
+          type: array
+          items:
+            type: number
+          nullable: true
+          description: Datos del período anterior
+        summary:
+          type: object
+          properties:
+            total:
+              type: number
+            average:
+              type: number
+            highest:
+              type: object
+              properties:
+                value:
+                  type: number
+                label:
+                  type: string
+            lowest:
+              type: object
+              properties:
+                value:
+                  type: number
+                label:
+                  type: string
+            changePercent:
+              type: number
+              description: Cambio % vs período anterior
+
+    ActivityFeed:
+      type: object
+      properties:
+        activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        hasMore:
+          type: boolean
+          description: Si hay más actividades disponibles
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - order
+            - inventory
+            - staff
+            - system
+        icon:
+          type: string
+          description: Nombre del icono Material Symbols
+        message:
+          type: string
+          description: Mensaje principal
+        details:
+          type: string
+          nullable: true
+          description: Detalles adicionales
+        timestamp:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Datos adicionales según el tipo

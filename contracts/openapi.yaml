@@ -1,0 +1,220 @@
+openapi: 3.1.0
+info:
+  title: Maloca Coffee Shop API
+  description: |
+    API para el sistema de gestión de cafetería Maloca.
+    
+    ## Autenticación
+    Esta API utiliza Firebase Authentication. Todos los endpoints protegidos
+    requieren un token JWT válido en el header `Authorization: Bearer <token>`.
+    
+    ## Base URL
+    - Producción: `https://maloca-api.web.app/api/v1`
+    - Desarrollo: `http://localhost:5001/maloca-dev/us-central1/api/v1`
+  version: 1.0.0
+  contact:
+    name: Maloca Dev Team
+    email: dev@maloca.com
+
+servers:
+  - url: https://maloca-api.web.app/api/v1
+    description: Production server
+  - url: http://localhost:5001/maloca-dev/us-central1/api/v1
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Autenticación y gestión de sesiones
+  - name: Users
+    description: Gestión de usuarios y roles
+  - name: Staff
+    description: Gestión de personal y turnos
+  - name: Menu
+    description: Categorías y productos del menú
+  - name: Orders
+    description: Gestión de pedidos
+  - name: Transactions
+    description: Transacciones y pagos
+  - name: Inventory
+    description: Control de inventario
+  - name: Dashboard
+    description: Estadísticas y reportes
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase Auth JWT token
+
+  responses:
+    UnauthorizedError:
+      description: Token de autenticación inválido o expirado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFoundError:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    ValidationError:
+      description: Error de validación en los datos enviados
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "UNAUTHORIZED"
+        message:
+          type: string
+          example: "Token inválido o expirado"
+    
+    ValidationError:
+      type: object
+      required:
+        - code
+        - message
+        - errors
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Error de validación"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    Timestamp:
+      type: object
+      properties:
+        _seconds:
+          type: integer
+        _nanoseconds:
+          type: integer
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        totalPages:
+          type: integer
+          example: 5
+
+paths:
+  # Auth endpoints - see endpoints/auth.yaml
+  /auth/login:
+    $ref: './endpoints/auth.yaml#/paths/~1auth~1login'
+  /auth/logout:
+    $ref: './endpoints/auth.yaml#/paths/~1auth~1logout'
+  /auth/password-reset:
+    $ref: './endpoints/auth.yaml#/paths/~1auth~1password-reset'
+  /auth/me:
+    $ref: './endpoints/auth.yaml#/paths/~1auth~1me'
+  /auth/profile:
+    $ref: './endpoints/auth.yaml#/paths/~1auth~1profile'
+
+  # Users endpoints - see endpoints/users.yaml
+  /users:
+    $ref: './endpoints/users.yaml#/paths/~1users'
+  /users/{id}:
+    $ref: './endpoints/users.yaml#/paths/~1users~1{id}'
+  /users/{id}/permissions:
+    $ref: './endpoints/users.yaml#/paths/~1users~1{id}~1permissions'
+
+  # Staff endpoints - see endpoints/staff.yaml
+  /staff:
+    $ref: './endpoints/staff.yaml#/paths/~1staff'
+  /staff/{id}:
+    $ref: './endpoints/staff.yaml#/paths/~1staff~1{id}'
+  /staff/{id}/clock:
+    $ref: './endpoints/staff.yaml#/paths/~1staff~1{id}~1clock'
+  /staff/{id}/schedule:
+    $ref: './endpoints/staff.yaml#/paths/~1staff~1{id}~1schedule'
+
+  # Menu endpoints - see endpoints/menu.yaml
+  /menu/categories:
+    $ref: './endpoints/menu.yaml#/paths/~1menu~1categories'
+  /menu/items:
+    $ref: './endpoints/menu.yaml#/paths/~1menu~1items'
+  /menu/items/{id}:
+    $ref: './endpoints/menu.yaml#/paths/~1menu~1items~1{id}'
+
+  # Orders endpoints - see endpoints/orders.yaml
+  /orders:
+    $ref: './endpoints/orders.yaml#/paths/~1orders'
+  /orders/{id}:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}'
+  /orders/{id}/status:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}~1status'
+  /orders/{id}/pay:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}~1pay'
+  /orders/{id}/cancel:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}~1cancel'
+  /orders/{id}/items:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}~1items'
+  /orders/{id}/items/{itemIndex}:
+    $ref: './endpoints/orders.yaml#/paths/~1orders~1{id}~1items~1{itemIndex}'
+
+  # Transactions endpoints - see endpoints/transactions.yaml
+  /transactions:
+    $ref: './endpoints/transactions.yaml#/paths/~1transactions'
+  /transactions/{id}:
+    $ref: './endpoints/transactions.yaml#/paths/~1transactions~1{id}'
+  /transactions/{id}/refund:
+    $ref: './endpoints/transactions.yaml#/paths/~1transactions~1{id}~1refund'
+  /transactions/summary/daily:
+    $ref: './endpoints/transactions.yaml#/paths/~1transactions~1summary~1daily'
+  /transactions/export:
+    $ref: './endpoints/transactions.yaml#/paths/~1transactions~1export'
+
+  # Inventory endpoints - see endpoints/inventory.yaml
+  /inventory:
+    $ref: './endpoints/inventory.yaml#/paths/~1inventory'
+  /inventory/{id}:
+    $ref: './endpoints/inventory.yaml#/paths/~1inventory~1{id}'
+  /inventory/{id}/adjust:
+    $ref: './endpoints/inventory.yaml#/paths/~1inventory~1{id}~1adjust'
+  /inventory/alerts:
+    $ref: './endpoints/inventory.yaml#/paths/~1inventory~1alerts'
+
+  # Dashboard endpoints - see endpoints/dashboard.yaml
+  /dashboard/stats:
+    $ref: './endpoints/dashboard.yaml#/paths/~1dashboard~1stats'
+  /dashboard/sales-chart:
+    $ref: './endpoints/dashboard.yaml#/paths/~1dashboard~1sales-chart'
+  /dashboard/activity:
+    $ref: './endpoints/dashboard.yaml#/paths/~1dashboard~1activity'

@@ -1,0 +1,336 @@
+# Menu Schema - Maloca Coffee Shop
+# Collections: categories, menuItems
+# This schema defines menu categories and products
+
+components:
+  schemas:
+    Category:
+      type: object
+      description: Categoría del menú
+      required:
+        - id
+        - name
+        - slug
+        - order
+        - isActive
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único de la categoría
+          example: "cat_cafe"
+        
+        name:
+          type: string
+          description: Nombre de la categoría
+          example: "Café"
+        
+        slug:
+          type: string
+          pattern: "^[a-z0-9-]+$"
+          description: Slug para URLs
+          example: "cafe"
+        
+        icon:
+          type: string
+          description: Nombre del icono o emoji
+          example: "☕"
+        
+        order:
+          type: integer
+          minimum: 0
+          description: Orden de aparición en el menú
+          example: 1
+        
+        isActive:
+          type: boolean
+          description: Si la categoría está activa
+          example: true
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    MenuItem:
+      type: object
+      description: Producto del menú
+      required:
+        - id
+        - name
+        - description
+        - price
+        - categoryId
+        - isAvailable
+        - preparationTime
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único del producto
+          example: "item_cappuccino"
+        
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Nombre del producto
+          example: "Cappuccino Artesanal"
+        
+        description:
+          type: string
+          maxLength: 500
+          description: Descripción del producto
+          example: "Doble carga de espresso con leche vaporizada y una corona de microespuma aterciopelada."
+        
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Precio en MXN
+          example: 65.00
+        
+        categoryId:
+          type: string
+          description: ID de la categoría
+          example: "cat_cafe"
+        
+        subcategory:
+          type: string
+          nullable: true
+          description: Subcategoría para filtrado
+          example: "Espresso"
+        
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de la imagen (Firebase Storage)
+          example: "https://storage.googleapis.com/maloca/menu/cappuccino.jpg"
+        
+        emoji:
+          type: string
+          nullable: true
+          description: Emoji de respaldo si no hay imagen
+          example: "☕"
+        
+        badges:
+          type: array
+          items:
+            type: string
+          description: Etiquetas del producto
+          example:
+            - "Popular"
+            - "Nuevo"
+        
+        customizations:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Customization'
+          description: Opciones de personalización
+        
+        isAvailable:
+          type: boolean
+          description: Disponibilidad actual
+          example: true
+        
+        preparationTime:
+          type: integer
+          minimum: 1
+          description: Tiempo de preparación en minutos
+          example: 5
+        
+        ingredients:
+          type: array
+          items:
+            type: string
+          description: Lista de ingredientes (para control de inventario)
+          example:
+            - "cafe_grano"
+            - "leche_entera"
+        
+        nutritionalInfo:
+          $ref: '#/components/schemas/NutritionalInfo'
+          nullable: true
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    Customization:
+      type: object
+      description: Opción de personalización del producto
+      required:
+        - name
+        - options
+      properties:
+        name:
+          type: string
+          description: Nombre de la personalización
+          example: "Tamaño"
+        type:
+          type: string
+          enum:
+            - single
+            - multiple
+          default: single
+          description: Tipo de selección
+        required:
+          type: boolean
+          default: false
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomizationOption'
+
+    CustomizationOption:
+      type: object
+      required:
+        - label
+        - priceModifier
+      properties:
+        label:
+          type: string
+          description: Nombre de la opción
+          example: "Grande"
+        priceModifier:
+          type: number
+          format: float
+          description: Modificador de precio (puede ser negativo)
+          example: 15.00
+
+    NutritionalInfo:
+      type: object
+      description: Información nutricional
+      properties:
+        calories:
+          type: integer
+          example: 120
+        protein:
+          type: number
+          example: 6.5
+        carbs:
+          type: number
+          example: 12.0
+        fat:
+          type: number
+          example: 4.5
+        caffeine:
+          type: integer
+          description: mg de cafeína
+          example: 75
+
+    MenuItemCreateRequest:
+      type: object
+      required:
+        - name
+        - description
+        - price
+        - categoryId
+        - preparationTime
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        price:
+          type: number
+          minimum: 0
+        categoryId:
+          type: string
+        subcategory:
+          type: string
+        image:
+          type: string
+          format: uri
+        emoji:
+          type: string
+        badges:
+          type: array
+          items:
+            type: string
+        customizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customization'
+        isAvailable:
+          type: boolean
+          default: true
+        preparationTime:
+          type: integer
+          minimum: 1
+        ingredients:
+          type: array
+          items:
+            type: string
+
+    MenuItemUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        price:
+          type: number
+          minimum: 0
+        categoryId:
+          type: string
+        subcategory:
+          type: string
+        image:
+          type: string
+          format: uri
+        emoji:
+          type: string
+        badges:
+          type: array
+          items:
+            type: string
+        customizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customization'
+        isAvailable:
+          type: boolean
+        preparationTime:
+          type: integer
+          minimum: 1
+        ingredients:
+          type: array
+          items:
+            type: string
+
+    CategoryListResponse:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    MenuItemListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+        total:
+          type: integer

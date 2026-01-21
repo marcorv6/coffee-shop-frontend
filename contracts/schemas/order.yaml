@@ -1,0 +1,341 @@
+# Order Schema - Maloca Coffee Shop
+# Collection: orders
+# This schema defines customer orders
+
+components:
+  schemas:
+    Order:
+      type: object
+      description: Pedido de cliente
+      required:
+        - id
+        - orderNumber
+        - locationId
+        - items
+        - subtotal
+        - tax
+        - total
+        - status
+        - paymentStatus
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: ID único del pedido (Firestore document ID)
+          example: "ord_abc123"
+        
+        orderNumber:
+          type: string
+          pattern: "^ML-[0-9]{4,}$"
+          description: Número de pedido legible
+          example: "ML-4829"
+        
+        customerId:
+          type: string
+          nullable: true
+          description: ID del cliente (si está registrado)
+          example: "user_xyz789"
+        
+        customerName:
+          type: string
+          nullable: true
+          description: Nombre del cliente
+          example: "Juan Pérez"
+        
+        tableNumber:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Número de mesa (si aplica)
+          example: 12
+        
+        locationId:
+          type: string
+          description: ID de la ubicación/sucursal
+          example: "loc_centro"
+        
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          description: Productos del pedido
+        
+        subtotal:
+          type: number
+          format: float
+          minimum: 0
+          description: Subtotal antes de impuestos
+          example: 195.50
+        
+        tax:
+          type: number
+          format: float
+          minimum: 0
+          description: Impuestos (IVA)
+          example: 31.28
+        
+        total:
+          type: number
+          format: float
+          minimum: 0
+          description: Total a pagar
+          example: 226.78
+        
+        status:
+          type: string
+          enum:
+            - pending
+            - preparing
+            - ready
+            - completed
+            - cancelled
+          description: |
+            Estado del pedido:
+            - pending: Pendiente de preparación
+            - preparing: En preparación
+            - ready: Listo para entregar
+            - completed: Entregado
+            - cancelled: Cancelado
+          example: "preparing"
+        
+        paymentStatus:
+          type: string
+          enum:
+            - pending
+            - paid
+            - refunded
+          description: Estado del pago
+          example: "paid"
+        
+        paymentMethod:
+          type: string
+          nullable: true
+          enum:
+            - cash
+            - card
+            - wallet
+          description: Método de pago utilizado
+          example: "card"
+        
+        paymentDetails:
+          $ref: '#/components/schemas/PaymentDetails'
+          nullable: true
+        
+        estimatedReadyTime:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Hora estimada de entrega
+        
+        completedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+          nullable: true
+          description: Hora de entrega real
+        
+        staffId:
+          type: string
+          nullable: true
+          description: ID del empleado que procesó/preparó
+          example: "ML-8821"
+        
+        notes:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Notas adicionales del cliente
+          example: "Sin azúcar, por favor"
+        
+        createdAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+        
+        updatedAt:
+          $ref: '../openapi.yaml#/components/schemas/Timestamp'
+
+    OrderItem:
+      type: object
+      description: Producto dentro de un pedido
+      required:
+        - menuItemId
+        - name
+        - quantity
+        - unitPrice
+        - subtotal
+      properties:
+        menuItemId:
+          type: string
+          description: ID del producto del menú
+          example: "item_cappuccino"
+        
+        name:
+          type: string
+          description: Nombre del producto (snapshot al momento del pedido)
+          example: "Cappuccino Artesanal"
+        
+        quantity:
+          type: integer
+          minimum: 1
+          description: Cantidad
+          example: 2
+        
+        unitPrice:
+          type: number
+          format: float
+          minimum: 0
+          description: Precio unitario
+          example: 65.00
+        
+        customizations:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Personalizaciones seleccionadas
+          example:
+            - "Grande (+$15.00)"
+            - "Leche de almendra (+$10.00)"
+        
+        subtotal:
+          type: number
+          format: float
+          minimum: 0
+          description: Subtotal del ítem (unitPrice * quantity + customizations)
+          example: 180.00
+
+    PaymentDetails:
+      type: object
+      description: Detalles del método de pago
+      properties:
+        cardType:
+          type: string
+          nullable: true
+          description: Tipo de tarjeta
+          example: "Mastercard"
+        
+        lastFour:
+          type: string
+          nullable: true
+          pattern: "^[0-9]{4}$"
+          description: Últimos 4 dígitos de la tarjeta
+          example: "4412"
+        
+        walletType:
+          type: string
+          nullable: true
+          description: Tipo de billetera digital
+          example: "Apple Pay"
+        
+        transactionId:
+          type: string
+          nullable: true
+          description: ID de transacción del procesador de pagos
+          example: "txn_abc123xyz"
+
+    OrderCreateRequest:
+      type: object
+      required:
+        - items
+        - locationId
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+        tableNumber:
+          type: integer
+          minimum: 1
+        customerId:
+          type: string
+        customerName:
+          type: string
+        locationId:
+          type: string
+        notes:
+          type: string
+          maxLength: 500
+
+    OrderItemRequest:
+      type: object
+      required:
+        - menuItemId
+        - quantity
+      properties:
+        menuItemId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        customizations:
+          type: array
+          items:
+            type: string
+
+    OrderStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - preparing
+            - ready
+            - completed
+            - cancelled
+        staffId:
+          type: string
+          description: ID del empleado que actualiza el estado
+
+    OrderPaymentRequest:
+      type: object
+      required:
+        - paymentMethod
+      properties:
+        paymentMethod:
+          type: string
+          enum:
+            - cash
+            - card
+            - wallet
+        paymentDetails:
+          type: object
+          properties:
+            cardType:
+              type: string
+            lastFour:
+              type: string
+            walletType:
+              type: string
+        staffId:
+          type: string
+
+    OrderPaymentResponse:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+        transaction:
+          $ref: './transaction.yaml#/components/schemas/Transaction'
+
+    OrderCancelRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+        staffId:
+          type: string
+
+    OrderListResponse:
+      type: object
+      required:
+        - orders
+        - meta
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        meta:
+          $ref: '../openapi.yaml#/components/schemas/PaginationMeta'

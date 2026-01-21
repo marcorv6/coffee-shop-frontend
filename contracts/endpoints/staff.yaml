@@ -1,0 +1,333 @@
+# Staff Endpoints - Maloca Coffee Shop
+# Employee management and time tracking
+
+paths:
+  /staff:
+    get:
+      tags:
+        - Staff
+      summary: Listar personal
+      description: Obtiene la lista de empleados
+      operationId: listStaff
+      parameters:
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filtrar por estado actual
+          schema:
+            type: string
+            enum:
+              - on_shift
+              - break
+              - off_duty
+        - name: role
+          in: query
+          description: Filtrar por cargo
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Buscar por nombre
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de empleados
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/staff.yaml#/components/schemas/StaffListResponse'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Staff
+      summary: Crear empleado
+      description: Registra un nuevo empleado en el sistema
+      operationId: createStaff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/staff.yaml#/components/schemas/StaffCreateRequest'
+            example:
+              userId: "abc123def456"
+              name: "María García"
+              role: "Barista"
+              email: "maria@maloca.com"
+              phone: "+52 555 123 4567"
+              locationId: "loc_centro"
+              hourlyRate: 85.50
+              schedule:
+                monday:
+                  start: "08:00"
+                  end: "16:00"
+                tuesday:
+                  start: "08:00"
+                  end: "16:00"
+      responses:
+        '201':
+          description: Empleado creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staff:
+                    $ref: '../schemas/staff.yaml#/components/schemas/Staff'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+
+  /staff/{id}:
+    get:
+      tags:
+        - Staff
+      summary: Obtener empleado
+      description: Obtiene los detalles de un empleado
+      operationId: getStaff
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del empleado (ej. ML-8821)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Empleado encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staff:
+                    $ref: '../schemas/staff.yaml#/components/schemas/Staff'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Staff
+      summary: Actualizar empleado
+      description: Actualiza los datos de un empleado
+      operationId: updateStaff
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/staff.yaml#/components/schemas/StaffUpdateRequest'
+      responses:
+        '200':
+          description: Empleado actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staff:
+                    $ref: '../schemas/staff.yaml#/components/schemas/Staff'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Staff
+      summary: Eliminar empleado
+      description: Elimina el registro de un empleado
+      operationId: deleteStaff
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Empleado eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /staff/{id}/clock:
+    post:
+      tags:
+        - Staff
+      summary: Registrar entrada/salida
+      description: |
+        Registra la entrada, salida o descanso de un empleado.
+        - `in`: Inicio de turno
+        - `out`: Fin de turno
+        - `break_start`: Inicio de descanso
+        - `break_end`: Fin de descanso
+      operationId: clockInOut
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/staff.yaml#/components/schemas/ClockRequest'
+            example:
+              action: "in"
+      responses:
+        '200':
+          description: Registro exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/staff.yaml#/components/schemas/ClockResponse'
+        '400':
+          description: Acción inválida
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "INVALID_ACTION"
+                message: "No puedes registrar salida sin haber registrado entrada"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /staff/{id}/schedule:
+    get:
+      tags:
+        - Staff
+      summary: Obtener horario
+      description: Obtiene el horario y turnos de un empleado
+      operationId: getStaffSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          required: true
+          description: Fecha inicio (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          description: Fecha fin (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Horario del empleado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staff:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  shifts:
+                    type: array
+                    items:
+                      $ref: '../schemas/staff.yaml#/components/schemas/Shift'
+                  totalHours:
+                    type: number
+                    description: Total de horas en el período
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Staff
+      summary: Actualizar horario
+      description: Actualiza el horario semanal de un empleado
+      operationId: updateStaffSchedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  $ref: '../schemas/staff.yaml#/components/schemas/WeeklySchedule'
+            example:
+              schedule:
+                monday:
+                  start: "09:00"
+                  end: "17:00"
+                tuesday:
+                  start: "09:00"
+                  end: "17:00"
+                wednesday: null
+                thursday:
+                  start: "09:00"
+                  end: "17:00"
+                friday:
+                  start: "09:00"
+                  end: "17:00"
+      responses:
+        '200':
+          description: Horario actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staff:
+                    $ref: '../schemas/staff.yaml#/components/schemas/Staff'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'

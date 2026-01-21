@@ -1,0 +1,273 @@
+# Users Endpoints - Maloca Coffee Shop
+# User management and roles
+
+paths:
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Listar usuarios
+      description: |
+        Obtiene la lista de usuarios del sistema.
+        Solo accesible para administradores.
+      operationId: listUsers
+      parameters:
+        - name: role
+          in: query
+          description: Filtrar por rol
+          schema:
+            type: string
+            enum:
+              - admin
+              - gerente
+              - barista
+              - cajero
+              - cliente
+        - name: status
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum:
+              - activo
+              - inactivo
+        - name: search
+          in: query
+          description: Buscar por nombre o email
+          schema:
+            type: string
+        - name: locationId
+          in: query
+          description: Filtrar por ubicación
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número de página
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Resultados por página
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/user.yaml#/components/schemas/UserListResponse'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '403':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "FORBIDDEN"
+                message: "No tienes permiso para ver usuarios"
+
+    post:
+      tags:
+        - Users
+      summary: Crear usuario
+      description: |
+        Crea un nuevo usuario en el sistema.
+        Crea tanto el registro en Firebase Auth como en Firestore.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/user.yaml#/components/schemas/UserCreateRequest'
+            example:
+              email: "nuevo.barista@maloca.com"
+              password: "TempPassword123!"
+              displayName: "Carlos Mendoza"
+              role: "barista"
+              locationId: "loc_centro"
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+                  temporaryPassword:
+                    type: string
+                    description: Contraseña temporal (se debe cambiar en primer login)
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '409':
+          description: Email ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "EMAIL_EXISTS"
+                message: "Ya existe un usuario con este email"
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Obtener usuario
+      description: Obtiene los detalles de un usuario específico
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del usuario (Firebase UID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Users
+      summary: Actualizar usuario
+      description: Actualiza los datos de un usuario
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/user.yaml#/components/schemas/UserUpdateRequest'
+            example:
+              role: "gerente"
+              status: "activo"
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Users
+      summary: Eliminar usuario
+      description: |
+        Desactiva un usuario del sistema.
+        No elimina físicamente, solo cambia status a "inactivo".
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario desactivado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Usuario desactivado exitosamente"
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '403':
+          description: No se puede eliminar
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Error'
+              example:
+                code: "CANNOT_DELETE_SELF"
+                message: "No puedes eliminar tu propia cuenta"
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+
+  /users/{id}/permissions:
+    patch:
+      tags:
+        - Users
+      summary: Actualizar permisos
+      description: Actualiza los permisos específicos de un usuario
+      operationId: updateUserPermissions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/user.yaml#/components/schemas/UserPermissionsRequest'
+            example:
+              permissions:
+                - "orders:read"
+                - "orders:write"
+                - "inventory:read"
+      responses:
+        '200':
+          description: Permisos actualizados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '../schemas/user.yaml#/components/schemas/User'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
