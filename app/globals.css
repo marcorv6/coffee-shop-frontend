@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Maloca Coffee Shop Theme - OKLCH Colors */
+    --background: oklch(0.97 0.005 60);
+    --background-dark: oklch(0.13 0.02 50);
+    --foreground: oklch(0.22 0.03 50);
+    --foreground-muted: oklch(0.55 0.03 50);
+    
+    --primary: oklch(0.55 0.08 50);
+    --primary-hover: oklch(0.48 0.09 50);
+    --primary-active: oklch(0.42 0.10 50);
+    --primary-foreground: oklch(0.98 0.005 60);
+    
+    --secondary: oklch(0.96 0.015 55);
+    --secondary-hover: oklch(0.93 0.02 55);
+    --secondary-foreground: oklch(0.22 0.03 50);
+    
+    --accent: oklch(0.50 0.08 140);
+    --accent-foreground: oklch(0.98 0.005 60);
+    
+    --muted: oklch(0.92 0.01 55);
+    --muted-hover: oklch(0.88 0.015 55);
+    --muted-foreground: oklch(0.55 0.03 50);
+    
+    --card: oklch(1.0 0 0);
+    --card-hover: oklch(0.98 0.005 60);
+    --card-cream: oklch(0.97 0.02 70);
+    --card-foreground: oklch(0.22 0.03 50);
+    
+    --border: oklch(0.88 0.01 55);
+    --border-hover: oklch(0.75 0.04 50);
+    --input: oklch(0.88 0.01 55);
+    --input-focus: oklch(0.55 0.08 50);
+    --ring: oklch(0.55 0.08 50);
+    
+    --destructive: oklch(0.55 0.20 25);
+    --destructive-hover: oklch(0.48 0.22 25);
+    --destructive-foreground: oklch(0.98 0.01 60);
+    
+    --warning: oklch(0.70 0.15 70);
+    --warning-foreground: oklch(0.35 0.10 60);
+    
+    --success: oklch(0.55 0.12 145);
+    --success-foreground: oklch(0.98 0.005 60);
+    
+    --radius: 0.75rem;
+    
+    /* Interactive state timing */
+    --transition-fast: 150ms;
+    --transition-normal: 200ms;
+    --transition-slow: 300ms;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  .dark {
+    --background: oklch(0.13 0.02 50);
+    --foreground: oklch(0.92 0.01 55);
+    --foreground-muted: oklch(0.60 0.02 55);
+    --card: oklch(0.18 0.02 50);
+    --card-hover: oklch(0.22 0.025 50);
+    --card-cream: oklch(0.18 0.02 50);
+    --border: oklch(0.28 0.02 50);
+    --border-hover: oklch(0.40 0.03 50);
+    --muted: oklch(0.22 0.02 50);
+    --muted-hover: oklch(0.28 0.025 50);
+  }
+  
+  /* Focus visible for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  
+  /* Remove default focus outline */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  
+  .focus-visible-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px var(--background);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Interactive link styles */
+  .interactive-link {
+    position: relative;
+    transition: color var(--transition-fast) ease;
+  }
+  .interactive-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--primary);
+    transition: width var(--transition-normal) ease;
+  }
+  .interactive-link:hover::after {
+    width: 100%;
+  }
+
+  /* Button press effect */
+  .press-effect {
+    transition: transform var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+  }
+  .press-effect:hover {
+    transform: translateY(-1px);
+  }
+  .press-effect:active {
+    transform: translateY(1px) scale(0.98);
+  }
+}
